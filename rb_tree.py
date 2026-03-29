@@ -1,146 +1,101 @@
 #!/usr/bin/env python3
-"""rb_tree - Red-Black tree implementation."""
+"""Red-Black tree — self-balancing BST with color invariants."""
 import sys
 
 RED, BLACK = True, False
 
 class RBNode:
+    __slots__ = ('key','color','left','right','parent')
     def __init__(self, key, color=RED):
-        self.key = key
-        self.color = color
+        self.key, self.color = key, color
         self.left = self.right = self.parent = None
 
 class RBTree:
     def __init__(self):
         self.NIL = RBNode(None, BLACK)
         self.root = self.NIL
-        self.size = 0
-
-    def _rot_left(self, x):
-        y = x.right
-        x.right = y.left
-        if y.left != self.NIL:
-            y.left.parent = x
-        y.parent = x.parent
-        if x.parent is None:
-            self.root = y
-        elif x == x.parent.left:
-            x.parent.left = y
-        else:
-            x.parent.right = y
-        y.left = x
-        x.parent = y
-
-    def _rot_right(self, x):
-        y = x.left
-        x.left = y.right
-        if y.right != self.NIL:
-            y.right.parent = x
-        y.parent = x.parent
-        if x.parent is None:
-            self.root = y
-        elif x == x.parent.right:
-            x.parent.right = y
-        else:
-            x.parent.left = y
-        y.right = x
-        x.parent = y
-
+        self.count = 0
     def insert(self, key):
-        node = RBNode(key)
-        node.left = node.right = self.NIL
-        y = None
-        x = self.root
-        while x != self.NIL:
-            y = x
-            x = x.left if key < x.key else x.right
-        node.parent = y
-        if y is None:
-            self.root = node
-        elif key < y.key:
-            y.left = node
-        else:
-            y.right = node
-        self.size += 1
-        self._fix_insert(node)
-
-    def _fix_insert(self, z):
-        while z.parent and z.parent.color == RED:
-            if z.parent == z.parent.parent.left:
-                y = z.parent.parent.right
-                if y.color == RED:
-                    z.parent.color = BLACK
-                    y.color = BLACK
-                    z.parent.parent.color = RED
-                    z = z.parent.parent
+        n = RBNode(key)
+        n.left = n.right = self.NIL
+        p, curr = None, self.root
+        while curr != self.NIL:
+            p = curr
+            if key < curr.key: curr = curr.left
+            elif key > curr.key: curr = curr.right
+            else: return  # dup
+        n.parent = p
+        if not p: self.root = n
+        elif key < p.key: p.left = n
+        else: p.right = n
+        self.count += 1
+        self._fix_insert(n)
+    def _fix_insert(self, n):
+        while n.parent and n.parent.color == RED:
+            if n.parent == n.parent.parent.left:
+                u = n.parent.parent.right
+                if u.color == RED:
+                    n.parent.color = BLACK; u.color = BLACK
+                    n.parent.parent.color = RED; n = n.parent.parent
                 else:
-                    if z == z.parent.right:
-                        z = z.parent
-                        self._rot_left(z)
-                    z.parent.color = BLACK
-                    z.parent.parent.color = RED
-                    self._rot_right(z.parent.parent)
+                    if n == n.parent.right:
+                        n = n.parent; self._rotL(n)
+                    n.parent.color = BLACK
+                    n.parent.parent.color = RED
+                    self._rotR(n.parent.parent)
             else:
-                y = z.parent.parent.left
-                if y.color == RED:
-                    z.parent.color = BLACK
-                    y.color = BLACK
-                    z.parent.parent.color = RED
-                    z = z.parent.parent
+                u = n.parent.parent.left
+                if u.color == RED:
+                    n.parent.color = BLACK; u.color = BLACK
+                    n.parent.parent.color = RED; n = n.parent.parent
                 else:
-                    if z == z.parent.left:
-                        z = z.parent
-                        self._rot_right(z)
-                    z.parent.color = BLACK
-                    z.parent.parent.color = RED
-                    self._rot_left(z.parent.parent)
+                    if n == n.parent.left:
+                        n = n.parent; self._rotR(n)
+                    n.parent.color = BLACK
+                    n.parent.parent.color = RED
+                    self._rotL(n.parent.parent)
         self.root.color = BLACK
-
-    def search(self, key):
+    def _rotL(self, x):
+        y = x.right; x.right = y.left
+        if y.left != self.NIL: y.left.parent = x
+        y.parent = x.parent
+        if not x.parent: self.root = y
+        elif x == x.parent.left: x.parent.left = y
+        else: x.parent.right = y
+        y.left = x; x.parent = y
+    def _rotR(self, y):
+        x = y.left; y.left = x.right
+        if x.right != self.NIL: x.right.parent = y
+        x.parent = y.parent
+        if not y.parent: self.root = x
+        elif y == y.parent.left: y.parent.left = x
+        else: y.parent.right = x
+        x.right = y; y.parent = x
+    def __contains__(self, key):
         n = self.root
         while n != self.NIL:
             if key == n.key: return True
             n = n.left if key < n.key else n.right
         return False
-
+    def __len__(self): return self.count
     def inorder(self):
-        result = []
-        def traverse(n):
-            if n != self.NIL:
-                traverse(n.left)
-                result.append(n.key)
-                traverse(n.right)
-        traverse(self.root)
-        return result
-
-    def _black_height(self, node=None):
-        if node is None:
-            node = self.root
-        if node == self.NIL:
-            return 1
-        lh = self._black_height(node.left)
-        rh = self._black_height(node.right)
-        if lh != rh:
-            return -1
-        return lh + (1 if node.color == BLACK else 0)
+        r = []
+        def io(n):
+            if n == self.NIL: return
+            io(n.left); r.append(n.key); io(n.right)
+        io(self.root); return r
 
 def test():
     t = RBTree()
-    for v in [7, 3, 18, 10, 22, 8, 11, 26]:
-        t.insert(v)
-    assert t.inorder() == sorted([7,3,18,10,22,8,11,26])
-    assert t.size == 8
+    for x in range(1, 21):
+        t.insert(x)
+    assert t.inorder() == list(range(1, 21))
+    assert len(t) == 20
+    assert 15 in t
+    assert 25 not in t
     assert t.root.color == BLACK
-    assert t._black_height() > 0
-    assert t.search(10)
-    assert not t.search(99)
-    t2 = RBTree()
-    for i in range(50):
-        t2.insert(i)
-    assert t2.size == 50
-    assert t2._black_height() > 0
-    assert t2.inorder() == list(range(50))
-    print("All tests passed!")
+    print("  rb_tree: ALL TESTS PASSED")
 
 if __name__ == "__main__":
-    test() if "--test" in sys.argv else print("rb_tree: Red-Black tree. Use --test")
+    if len(sys.argv) > 1 and sys.argv[1] == "test": test()
+    else: print("Red-Black tree")

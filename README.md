@@ -1,6 +1,10 @@
-# rb_tree
-Single-file Python CLI tool. Zero dependencies, Python 3.8+.
+# rb-tree
+
+Single-file Python CLI. Zero dependencies.
+
 ## Usage
+
 ```bash
-python3 rb_tree.py --test
+python3 rb_tree.py
+python3 rb_tree.py test
 ```
